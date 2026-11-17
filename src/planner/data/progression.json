@@ -1,0 +1,10 @@
+[
+  { "name": "wooden tools", "goals": [{ "item": "wooden_pickaxe", "count": 1 }] },
+  { "name": "stone tools", "goals": [{ "item": "stone_pickaxe", "count": 1 }, { "item": "stone_axe", "count": 1 }, { "item": "stone_sword", "count": 1 }] },
+  { "name": "light and heat", "goals": [{ "item": "furnace", "count": 1 }, { "item": "torch", "count": 16 }] },
+  { "name": "iron tools", "goals": [{ "item": "iron_pickaxe", "count": 1 }, { "item": "iron_sword", "count": 1 }] },
+  { "name": "shield and bucket", "goals": [{ "item": "shield", "count": 1 }, { "item": "bucket", "count": 1 }] },
+  { "name": "iron armour", "goals": [{ "item": "iron_helmet", "count": 1 }, { "item": "iron_chestplate", "count": 1 }, { "item": "iron_leggings", "count": 1 }, { "item": "iron_boots", "count": 1 }] },
+  { "name": "diamond tools", "goals": [{ "item": "diamond_pickaxe", "count": 1 }, { "item": "diamond_sword", "count": 1 }] },
+  { "name": "diamond armour", "goals": [{ "item": "diamond_helmet", "count": 1 }, { "item": "diamond_chestplate", "count": 1 }, { "item": "diamond_leggings", "count": 1 }, { "item": "diamond_boots", "count": 1 }] }
+]

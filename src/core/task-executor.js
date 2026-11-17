@@ -37,6 +37,7 @@ class TaskExecutor extends EventEmitter {
      * @param {number} spec.priority
      * @param {(signal: AbortSignal) => Promise<object>} spec.run
      * @param {boolean} [spec.resumable] re-queue when preempted
+     * @param {boolean} [spec.yields] background task (follow, guard): any new task replaces it
      * @param {number} [spec.timeoutMs]
      * @param {string} [spec.source] who asked (player name, 'reflex', 'self')
      * @returns {Promise<object>} result object
@@ -48,6 +49,7 @@ class TaskExecutor extends EventEmitter {
             priority: spec.priority ?? PRIORITY.SELF,
             run: spec.run,
             resumable: !!spec.resumable,
+            yields: !!spec.yields,       // background task: gives way to any new task
             timeoutMs: spec.timeoutMs || 0,
             source: spec.source || 'unknown',
             controller: null,
@@ -57,7 +59,7 @@ class TaskExecutor extends EventEmitter {
         };
         const promise = new Promise(resolve => { task.resolve = resolve; });
 
-        if (this.current && task.priority > this.current.priority) {
+        if (this.current && (task.priority > this.current.priority || this.current.yields)) {
             this.current.preempted = true;
             this.current.controller.abort(`preempted by ${task.name}`);
         }

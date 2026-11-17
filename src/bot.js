@@ -20,6 +20,7 @@ const MinerSkill = require('./skills/miner');
 const CrafterSkill = require('./skills/crafter');
 const SurvivalSkill = require('./skills/survival');
 const MemorySystem = require('./systems/memory');
+const { createAgent } = require('./agent');
 
 class OpenNovaBot {
     constructor(config) {
@@ -163,34 +164,30 @@ class OpenNovaBot {
             // Record spawn point
             this.bot.systems.memory.setSpawn(this.bot.entity.position);
 
+            // Build the agent (planner, skills, reflexes, model) on top of the body
+            if (this.config.agent?.enabled !== false) {
+                try {
+                    this.bot.agent = createAgent(this.bot, this.config, this.logger, path.join(__dirname, '..', 'data'));
+                    this.bot.agent.start();
+                } catch (error) {
+                    this.logger.error(`Agent failed to start: ${error.stack || error.message}`);
+                    this.bot.agent = null;
+                }
+            }
+
             // Greeting
             setTimeout(() => {
                 this.bot.chat(`OpenNova online! Type ${this.config.settings.commandPrefix}help for commands.`);
             }, 1000);
         });
 
-        // Chat handler for commands
+        // Chat handler: !commands go to the command registry, everything else to the agent
         this.bot.on('chat', (username, message) => {
             // Ignore own messages
             if (username === this.bot.username) return;
 
             this.logger.chat(username, message);
-
-            // Check for command prefix
-            const prefix = this.config.settings.commandPrefix;
-            if (!message.startsWith(prefix)) return;
-
-            // Parse command
-            const args = message.slice(prefix.length).trim().split(/\s+/);
-            const commandName = args.shift().toLowerCase();
-
-            this.logger.command(username, `${prefix}${commandName} ${args.join(' ')}`);
-
-            // Record interaction
-            this.bot.systems.memory.recordInteraction(username, 'command');
-
-            // Execute command
-            this.bot.commandRegistry.execute(this.bot, commandName, args, username);
+            this.handleMessage(username, message, false);
         });
 
         // Death handler
@@ -203,6 +200,7 @@ class OpenNovaBot {
             }
 
             // Stop all activities
+            if (this.bot.agent) this.bot.agent.stop('died');
             this.bot.skills.pathfinder.stop();
             this.bot.skills.combat.stopAttacking();
             this.bot.skills.miner.stop();
@@ -238,6 +236,11 @@ class OpenNovaBot {
             this.logger.warn(`Disconnected: ${reason}`);
             this.isConnected = false;
 
+            if (this.bot.agent) {
+                try { this.bot.agent.shutdown(); } catch (_) { /* ignore */ }
+                this.bot.agent = null;
+            }
+
             // Cleanup skills to prevent memory leaks
             if (this.bot.skills) {
                 if (this.bot.skills.combat && this.bot.skills.combat.cleanup) {
@@ -263,15 +266,9 @@ class OpenNovaBot {
 
         // Whisper handler
         this.bot.on('whisper', (username, message) => {
+            if (username === this.bot.username) return;
             this.logger.info(`[Whisper] ${username}: ${message}`);
-
-            // Handle whispered commands
-            const prefix = this.config.settings.commandPrefix;
-            if (message.startsWith(prefix)) {
-                const args = message.slice(prefix.length).trim().split(/\s+/);
-                const commandName = args.shift().toLowerCase();
-                this.bot.commandRegistry.execute(this.bot, commandName, args, username);
-            }
+            this.handleMessage(username, message, true);
         });
 
         // Entity hurt (for defensive mode)
@@ -280,6 +277,42 @@ class OpenNovaBot {
                 this.logger.debug('Bot was hurt!');
             }
         });
+    }
+
+    /**
+     * Route one incoming chat line or whisper.
+     */
+    handleMessage(username, message, whisper) {
+        const prefix = this.config.settings.commandPrefix;
+        const agent = this.bot.agent;
+
+        if (!message.startsWith(prefix)) {
+            if (agent) {
+                agent.onChat(username, message, { whisper }).catch(error => {
+                    this.logger.error(`Agent chat error: ${error.stack || error.message}`);
+                });
+            }
+            return;
+        }
+
+        const args = message.slice(prefix.length).trim().split(/\s+/);
+        const commandName = (args.shift() || '').toLowerCase();
+        if (!commandName || !this.bot.commandRegistry.has(commandName)) return;
+
+        // Only the owner and trusted players may command the bot.
+        if (agent && !agent.authorize(username)) {
+            this.logger.warn(`Ignored command from untrusted player ${username}: ${message}`);
+            return;
+        }
+
+        this.logger.command(username, `${prefix}${commandName} ${args.join(' ')}`);
+        this.bot.systems.memory.recordInteraction(username, 'command');
+
+        // A manual action command takes the body away from whatever the agent was doing.
+        const canonical = this.bot.commandRegistry.aliases.get(commandName) || commandName;
+        if (agent) agent.onManualCommand(canonical);
+
+        this.bot.commandRegistry.execute(this.bot, commandName, args, username);
     }
 
     /**
@@ -306,6 +339,11 @@ class OpenNovaBot {
      */
     shutdown() {
         this.logger.info('Shutting down...');
+
+        if (this.bot && this.bot.agent) {
+            try { this.bot.agent.shutdown(); } catch (_) { /* ignore */ }
+            this.bot.agent = null;
+        }
 
         if (this.bot && this.bot.systems && this.bot.systems.memory) {
             this.bot.systems.memory.save();

@@ -15,14 +15,23 @@ class SurvivalSkill {
      */
     initialize() {
         // Configure auto-eat
-        if (this.config.features.autoEat && this.bot.autoEat) {
-            this.bot.autoEat.options = {
+        // The agent's reflex engine handles eating when it is enabled.
+        const reflexEating = this.config.agent?.enabled !== false && this.config.agent?.reflexes !== false;
+        if (this.config.features.autoEat && this.bot.autoEat && !reflexEating) {
+            const options = {
                 priority: 'foodPoints',
-                startAt: 14,
+                minHunger: 14,
                 bannedFood: ['rotten_flesh', 'spider_eye', 'poisonous_potato', 'pufferfish']
             };
-            this.bot.autoEat.enable();
-            this.logger.debug('Auto-eat enabled');
+            try {
+                if (typeof this.bot.autoEat.setOpts === 'function') this.bot.autoEat.setOpts(options);
+                else this.bot.autoEat.options = { ...options, startAt: 14 };
+                if (typeof this.bot.autoEat.enableAuto === 'function') this.bot.autoEat.enableAuto();
+                else if (typeof this.bot.autoEat.enable === 'function') this.bot.autoEat.enable();
+                this.logger.debug('Auto-eat enabled');
+            } catch (error) {
+                this.logger.warn(`Auto-eat could not be enabled: ${error.message}`);
+            }
         }
 
         // Configure armor manager

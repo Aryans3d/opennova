@@ -75,6 +75,20 @@ if (process.env.MC_USERNAME) config.bot.username = process.env.MC_USERNAME;
 if (process.env.MC_VERSION) config.bot.version = process.env.MC_VERSION;
 if (process.env.MC_AUTH) config.bot.auth = process.env.MC_AUTH;
 
+// Model overrides, e.g. NOVA_FAST_PROVIDER=ollama NOVA_FAST_MODEL=qwen3:14b
+config.llm = config.llm || {};
+for (const role of ['fast', 'smart']) {
+    const provider = process.env[`NOVA_${role.toUpperCase()}_PROVIDER`];
+    const model = process.env[`NOVA_${role.toUpperCase()}_MODEL`];
+    const baseURL = process.env[`NOVA_${role.toUpperCase()}_BASE_URL`];
+    if (provider || model || baseURL) {
+        const previous = provider && config.llm[role] && config.llm[role].provider !== provider ? {} : (config.llm[role] || {});
+        config.llm[role] = { ...previous, ...(provider && { provider }), ...(model && { model }), ...(baseURL && { baseURL }) };
+    }
+}
+if (process.env.NOVA_SMART_PROVIDER === 'none') delete config.llm.smart;
+if (process.env.NOVA_OWNER) config.settings.owner = process.env.NOVA_OWNER;
+
 // Display configuration
 logger.info('Bot Configuration:');
 logger.info(`  Host: ${config.bot.host}:${config.bot.port}`);

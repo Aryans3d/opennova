@@ -4,14 +4,15 @@
         "auth": "offline",
         "host": "localhost",
         "port": 25565,
-        "version": "1.21.8"
+        "version": "26.1"
     },
     "settings": {
         "commandPrefix": "!",
         "owner": "",
         "autoReconnect": true,
         "reconnectDelay": 5000,
-        "maxReconnectAttempts": 10
+        "maxReconnectAttempts": 10,
+        "trusted": []
     },
     "features": {
         "autoEat": true,
@@ -28,5 +29,34 @@
         "placeTorches": true,
         "torchLightLevel": 7,
         "avoidLava": true
+    },
+    "agent": {
+        "enabled": true,
+        "mode": "assist",
+        "listen": "auto",
+        "aliases": [
+            "nova"
+        ],
+        "maxRounds": 6,
+        "reflexes": true,
+        "trace": true,
+        "homeProtectRadius": 12,
+        "idleSeconds": 12
+    },
+    "llm": {
+        "fast": {
+            "provider": "anthropic",
+            "model": "claude-haiku-5-5",
+            "effort": "low"
+        },
+        "smart": {
+            "provider": "anthropic",
+            "model": "claude-opus-5-5",
+            "effort": "medium"
+        },
+        "budget": {
+            "callsPerHour": 240,
+            "tokensPerHour": 600000
+        }
     }
 }
