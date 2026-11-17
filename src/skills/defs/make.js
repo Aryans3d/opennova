@@ -112,23 +112,27 @@ module.exports = [
                 if (existingInput && existingInput.name !== a.input) await furnace.takeInput().catch(() => {});
                 await furnace.putFuel(d.itemsByName[fuel].id, null, fuelCount);
                 await furnace.putInput(d.itemsByName[a.input].id, null, a.count);
+                // 10 s per item, plus slack for a cold furnace.
                 const deadline = Date.now() + a.count * 11000 + 20000;
                 while (taken < a.count && Date.now() < deadline) {
                     check(signal);
                     await sleep(1000, signal);
                     const out = furnace.outputItem();
-                    if (out && (out.count + taken >= a.count || out.count >= 16)) {
+                    const inputLeft = furnace.inputItem();
+                    // Collect when everything is cooked, or in batches so a long job is not lost if interrupted.
+                    if (out && (!inputLeft || out.count >= 16)) {
                         const got = await furnace.takeOutput().catch(() => null);
                         if (got) taken += got.count;
-                    }
-                    if (!furnace.inputItem() && !furnace.outputItem() && taken >= a.count) break;
-                    if (!furnace.inputItem() && !furnace.outputItem() && furnace.progress === 0 && taken < a.count && Date.now() > deadline - a.count * 11000) {
-                        // nothing left inside and nothing coming
-                        if (!furnace.outputItem()) break;
+                    } else if (!out && !inputLeft) {
+                        break; // nothing inside and nothing coming
                     }
                 }
                 const rest = furnace.outputItem();
-                if (rest) { const got = await furnace.takeOutput().catch(() => null); if (got) taken += got.count; }
+                if (rest) {
+                    const got = await furnace.takeOutput().catch(() => null);
+                    if (got) taken += got.count;
+                }
+                // Do not leave raw input behind when we give up.
                 if (taken < a.count && furnace.inputItem()) await furnace.takeInput().catch(() => {});
             } finally {
                 try { furnace.close(); } catch (_) { /* ignore */ }

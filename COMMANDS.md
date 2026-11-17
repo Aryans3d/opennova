@@ -172,3 +172,21 @@ Complete list of all available commands. Default prefix: `!`
 ---
 
 *Total Commands: 70+*
+
+---
+
+## 🧠 Agent
+
+Commands now require the sender to be the owner or a trusted player.
+
+| Command | What it does |
+|---------|--------------|
+| `!ask <anything>` | Give an order in plain language (same as just typing it in chat) |
+| `!obtain <item> [count]` | Get an item by any means: plans gathering, tools, smelting and crafting, then does it |
+| `!plan <item> [count]` | Show the steps `!obtain` would take |
+| `!do <skill> [args]` | Run one agent skill, e.g. `!do mine_block blocks=iron_ore count=3` |
+| `!skills` | List agent skills |
+| `!mode [obey\|assist\|auto]` | How independent the agent is |
+| `!trust <player>` / `!untrust <player>` | Manage who else may give orders |
+| `!agent` | Models, mode, current task and model usage |
+

@@ -1,6 +1,9 @@
 # OpenNova Agent — Architecture
 
-Status: design, nothing in this document is implemented yet.
+Status: Phases 0–5 are implemented in a first version (see §20 for exactly
+what exists and where it differs from this design). It has unit and
+integration tests on a stub bot but has **not yet been run in a real
+Minecraft world**.
 Scope: turn OpenNova from a `!command` bot into an autonomous companion that
 understands plain-language orders, plans the steps, acts, recovers from
 failure, and finds useful work on its own.
@@ -727,3 +730,38 @@ These need a running server or a product choice and are not settled here:
 2. Which specific local model is the default — decided by the Phase 2
    benchmark, not in advance.
 3. Whether the bot should speak in the player's language automatically.
+
+## 20. Implementation status
+
+What exists in the code today, against the design above.
+
+| Area | Built | Differs from the design / not built |
+|---|---|---|
+| Result type, error codes | `src/core/result.js` | — |
+| Task executor | `src/core/task-executor.js`: priorities, preemption, resume, abort, timeouts, background tasks | — |
+| Permissions | `src/core/permissions.js`: owner / trusted / stranger, danger classes, protected home, chat sanitising | With no owner configured, the first player to speak becomes owner (and is saved) |
+| Skills | 33 skills in `src/skills/defs/`, one registry | No building, farming, trading or shelter skills yet |
+| Planner | `src/planner/acquire.js`: chest, craft, smelt, mine, hunt; cost ranking; reservations; hoisted gathering | Crop farming is not a source: bread needs wheat already growing nearby |
+| World model | `src/core/world-model.js` | Scans run on demand with a 4 s cache, not as a background time-sliced index |
+| Reflexes | `src/reflexes/engine.js`: air, creeper, flee, fight back, eat | Runs every 250 ms, not every tick. No fall guard, lava escape, night shelter or tool-break rule |
+| LLM layer | `src/llm/`: Anthropic (official SDK), Gemini, and one OpenAI-compatible adapter for OpenAI, OpenRouter, Groq, DeepSeek, Mistral, xAI, Together, Ollama, LM Studio and custom endpoints | — |
+| Controller | `src/agent/controller.js`: plan-then-execute, escalation, loop detection, templated confirmations | — |
+| Router | `src/agent/router.js`: phrase table in English plus a few Hindi, Spanish and French phrases | — |
+| Memory | `src/memory/store.js`: episodes, lessons, facts in SQLite with FTS5 | Uses Node's built-in `node:sqlite` instead of `better-sqlite3` (no native build). Home, waypoints and chests stay in the existing JSON files so legacy commands share them |
+| Lessons | Stored by the controller when a failed attempt is followed by a working one | The background reflection pass (L5) is not built |
+| Autonomy | `src/agent/goals.js`: three modes, needs (sleep, storage, food), progression file | Fully deterministic; the model is not consulted to break ties. Macros are not built |
+| Trace | `src/trace/tracer.js`: one JSON line per order in `logs/` | Replay tool and benchmark runner are not built |
+| Commands | New `!ask !obtain !plan !do !skills !mode !trust !untrust !agent` | The 70+ existing commands are kept as they were rather than regenerated from the registry. They now require owner or trusted status, and an action command cancels whatever the agent was doing |
+| Stuck detection | Travel stall detection and per-skill timeouts | No separate watchdog |
+
+Bugs fixed in existing code along the way:
+
+- `src/skills/survival.js` called `bot.autoEat.enable()`, which does not
+  exist in the pinned `mineflayer-auto-eat` 5.0.3 and would throw on spawn.
+- The old crafting path passes the wanted *item* count to `bot.craft`,
+  which expects the number of *recipe runs* (so 4 planks asked for 4 runs).
+  The new `craft` skill converts correctly; the legacy `!craft` command is
+  unchanged.
+
+Known and not fixed: the existing commands `finditem` and `find` both
+declare the alias `locate`.

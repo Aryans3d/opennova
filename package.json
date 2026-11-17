@@ -1,7 +1,7 @@
 {
     "name": "opennova",
     "version": "1.0.0",
-    "description": "Advanced Minecraft bot with comprehensive features",
+    "description": "Minecraft companion bot with an autonomous, LLM-driven agent",
     "main": "src/index.js",
     "scripts": {
         "start": "node src/index.js",
@@ -27,5 +27,8 @@
         "mineflayer-pvp": "1.3.2",
         "mineflayer-tool": "1.2.0",
         "vec3": "0.1.10"
+    },
+    "engines": {
+        "node": ">=22"
     }
 }

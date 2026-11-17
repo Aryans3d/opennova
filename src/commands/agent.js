@@ -59,7 +59,7 @@ module.exports = {
         obtain: {
             description: 'Get an item by any means (gather, craft, smelt, chests)',
             usage: '!obtain <item> [count]',
-            aliases: ['get'],
+            aliases: ['fetch'],
             execute: async (bot, args, sender) => {
                 const agent = needAgent(bot);
                 if (!agent) return;
