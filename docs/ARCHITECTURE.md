@@ -655,7 +655,7 @@ Each phase is usable on its own and ends with a measurable exit test.
 
 | Phase | Work | Exit test |
 |---|---|---|
-| **0 Foundations** | Pin dependency versions; settle the Minecraft version (config says 1.21.8, README says 1.21.1); result type; skill contract; registry; task executor with abort; enforce `owner`; move chest logic into skills; `!commands` generated from registry | All existing commands work through the registry; `stop` halts within 250 ms; two overlapping commands no longer conflict |
+| **0 Foundations** | Upgrade and pin dependency versions; verify 26.1 (§18); result type; skill contract; registry; task executor with abort; enforce `owner`; move chest logic into skills; `!commands` generated from registry | All existing commands work through the registry; `stop` halts within 250 ms; two overlapping commands no longer conflict |
 | **1 Planner** | World model; acquire planner with all sources; smelting/fuel tables; `obtain` skill | `!obtain iron_pickaxe` succeeds from an empty inventory with zero model calls |
 | **2 Brain** | LLM client + both adapters; router; snapshot; controller loop; validation and fuzzy names; trace | ≥ 80 % on the 50-order benchmark with the fast model |
 | **3 Survival** | Reflex engine and all rules; watchdog; remove old interval loops | ≤ 0.2 deaths/hour over a 3-hour night-inclusive run |
@@ -688,14 +688,42 @@ model in Phase 2 starts on top of a body that already works.
 | Language | JavaScript + JSDoc + JSON Schema | TypeScript migration first |
 | Commands | Kept, generated from the skill registry | Removed in favour of chat only |
 
-## 18. Open questions
+## 18. Minecraft version compatibility
+
+Checked on 2026-11-17 against the npm registry.
+
+| Item | Version |
+|---|---|
+| Latest Minecraft Java release | 26.3 |
+| Newest version Mineflayer 4.39.0 lists as tested | 26.1 |
+| Newest Java version in `minecraft-data` 3.119.0 | 26.1 |
+| Mineflayer in this repo's lockfile | 4.33.0 |
+| Node required by Mineflayer 4.39.0 | ≥ 22 |
+
+Decisions:
+
+- **Target 26.1**, the newest version the libraries support. Fall back to
+  1.21.11 if Phase 0 testing shows a plugin misbehaving on 26.1.
+- **Upgrade Mineflayer to 4.39.0** and pin it exactly. Raise the README's
+  Node requirement from 18 to 22.
+- **Only Mineflayer touches the game protocol.** The planner reads recipes
+  and drops from `minecraft-data` for whatever version the bot connects
+  with, and nothing in `agent/`, `planner/` or `memory/` hard-codes a
+  version. Moving to a newer Minecraft is a dependency bump plus a
+  benchmark run.
+- **Plugin risk.** `mineflayer-pathfinder` (last release 2023),
+  `mineflayer-pvp` (2022) and `mineflayer-tool` (2022) are no longer
+  updated. They sit on top of Mineflayer's API, not the protocol, so they
+  usually keep working, but each is wrapped by one skill module so it can
+  be replaced without touching the rest. The reflex engine already
+  replaces most of what `pvp` and `auto-eat` do.
+
+## 19. Open questions
 
 These need a running server or a product choice and are not settled here:
 
-1. Which Minecraft version to standardise on — depends on what the pinned
-   Mineflayer release handles reliably.
-2. Whether `minecraft-data` exposes enough smelting and loot data for the
+1. Whether `minecraft-data` exposes enough smelting and loot data for the
    target version, or the hand-kept tables must be larger.
-3. Which specific local model is the default — decided by the Phase 2
+2. Which specific local model is the default — decided by the Phase 2
    benchmark, not in advance.
-4. Whether the bot should speak in the player's language automatically.
+3. Whether the bot should speak in the player's language automatically.
