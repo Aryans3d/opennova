@@ -1,0 +1,11 @@
+{
+  "_comment": "items smelted per fuel item",
+  "coal": 8,
+  "charcoal": 8,
+  "coal_block": 80,
+  "blaze_rod": 12,
+  "dried_kelp_block": 20,
+  "_planks": 1.5,
+  "_log": 1.5,
+  "stick": 0.5
+}
